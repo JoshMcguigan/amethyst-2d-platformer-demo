@@ -1,19 +1,21 @@
 use amethyst::{
     assets::{AssetStorage, Loader},
     core::{Transform, TransformBundle},
-    ecs::{Entity, Read, ReadStorage, WriteStorage, System, Join, Component, DenseVecStorage},
+    ecs::{Entity, Read, ReadStorage, WriteStorage, System, Join, Component, DenseVecStorage,
+          NullStorage, Entities, },
     prelude::*,
     renderer::{
         Camera, DisplayConfig, DrawFlat2D, Pipeline, PngFormat, Projection, RenderBundle, Stage,
-        Texture, TextureHandle, TextureMetadata, ALPHA, ColorMask, ScreenDimensions,
+        Texture, TextureHandle, TextureMetadata, ALPHA, ColorMask, ScreenDimensions, Flipped
     },
     input::{InputBundle, InputHandler}
 };
 
+#[derive(Default)]
 pub struct Player;
 
 impl Component for Player {
-    type Storage = DenseVecStorage<Self>;
+    type Storage = NullStorage<Self>;
 }
 
 struct Example;
@@ -106,18 +108,28 @@ pub struct ControlSystem;
 
 impl<'s> System<'s> for ControlSystem {
     type SystemData = (
+        Entities<'s>,
         WriteStorage<'s, Transform>,
         ReadStorage<'s, Player>,
         Read<'s, InputHandler<String, String>>,
+        WriteStorage<'s, Flipped>,
     );
 
-    fn run(&mut self, (mut transforms, player, input): Self::SystemData) {
-        for (mut transform, _) in (&mut transforms, &player).join() {
+    fn run(&mut self, (entity, mut transforms, player, input, mut flipped): Self::SystemData) {
+        for (mut transform, player, e) in (&mut transforms, &player, &*entity).join() {
             if let Some(mv_amount) = input.axis_value("horizontal") {
                 let player_x = transform.translation().x;
                 transform.set_x(
                     player_x + mv_amount as f32
                 );
+                if mv_amount > 0. {
+                    // face right
+                    flipped.remove(e);
+                } else if mv_amount < 0. {
+                    // face left
+                    flipped.insert(e, Flipped::Horizontal);
+                }
+
             }
         }
     }
