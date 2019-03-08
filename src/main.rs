@@ -8,15 +8,13 @@ use amethyst::{
         Camera, DisplayConfig, DrawFlat2D, Pipeline, PngFormat, Projection, RenderBundle, Stage,
         Texture, TextureHandle, TextureMetadata, ALPHA, ColorMask, ScreenDimensions, Flipped
     },
-    input::{InputBundle, InputHandler}
+    input::{InputBundle, InputHandler},
 };
+use specs_derive::{Component};
 
-#[derive(Default)]
+#[derive(Default, Component)]
+#[storage(NullStorage)]
 pub struct Player;
-
-impl Component for Player {
-    type Storage = NullStorage<Self>;
-}
 
 struct Example;
 
@@ -27,7 +25,7 @@ impl SimpleState for Example {
 
         world.register::<Player>();
 
-        let _image = init_image(world, &texture_handle);
+        init_player(world, &texture_handle);
 
         init_camera(world)
     }
@@ -38,7 +36,7 @@ fn main() -> amethyst::Result<()> {
     let config = DisplayConfig::load("./resources/display_config.ron");
     let pipe = Pipeline::build().with_stage(
         Stage::with_backbuffer()
-            .clear_target([0.1, 0.1, 0.1, 1.0], 1.0)
+            .clear_target([0.1, 0.1, 0.2, 1.0], 1.0)
             .with_pass(DrawFlat2D::new().with_transparency(ColorMask::all(), ALPHA, None)),
     );
     let input_bundle = InputBundle::<String, String>::new()
@@ -72,7 +70,7 @@ fn init_camera(world: &mut World) {
         .build();
 }
 
-fn init_image(world: &mut World, texture: &TextureHandle) -> Entity {
+fn init_player(world: &mut World, texture: &TextureHandle) -> Entity {
     let width = 614;
     let height = 564;
     let scale = 0.3;
