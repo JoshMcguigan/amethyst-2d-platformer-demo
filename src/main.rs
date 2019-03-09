@@ -8,7 +8,7 @@ use amethyst::{
     renderer::{
         ALPHA, Camera, ColorMask, DisplayConfig, DrawFlat2D, Flipped, Pipeline, PngFormat,
         Projection, RenderBundle, Sprite, SpriteRender, SpriteSheet,
-        SpriteSheetHandle, Stage, Texture, TextureMetadata
+        SpriteSheetHandle, Stage, Texture, TextureMetadata, SpriteSheetFormat,
     },
 };
 use specs_derive::Component;
@@ -56,9 +56,14 @@ impl SimpleState for Example {
     fn on_start(&mut self, data: StateData<'_, GameData<'_, '_>>) {
         let world = data.world;
 
-        let sprite_sheet_handle = load_sprite_sheet(world);
+        let background_sprite_sheet_handle =
+            load_sprite_sheet(world, "./texture/BG.png", "./texture/BG.ron");
+        let _background = init_background_sprite(world, &background_sprite_sheet_handle);
+
+
 
         world.register::<Player>();
+        let sprite_sheet_handle = load_player_sprite_sheet(world);
         init_player(world, &sprite_sheet_handle);
 
         init_camera(world)
@@ -79,7 +84,10 @@ fn main() -> amethyst::Result<()> {
     let game_data = GameDataBuilder::default()
         .with_bundle(TransformBundle::new())?
         .with_bundle(input_bundle)?
-        .with_bundle(RenderBundle::new(pipe, Some(config)).with_sprite_sheet_processor())?
+        .with_bundle(RenderBundle::new(pipe, Some(config))
+            .with_sprite_sheet_processor()
+            .with_sprite_visibility_sorting(&[])
+        )?
         .with(ControlSystem, "control_system", &[])
         .with(PlayerAnimationSystem, "player_animation_system", &[]);
 
@@ -129,7 +137,41 @@ fn init_player(world: &mut World, sprite_sheet_handle: &SpriteSheetHandle) -> En
         .build()
 }
 
-fn load_sprite_sheet(world: &mut World) -> SpriteSheetHandle {
+fn init_background_sprite(world: &mut World, sprite_sheet: &SpriteSheetHandle) -> Entity {
+    let mut transform = Transform::default();
+    transform.set_xyz(500., 500., -10.);
+    transform.set_scale(1., 1.5, 1.);
+    let sprite = SpriteRender {
+        sprite_sheet: sprite_sheet.clone(),
+        sprite_number: 0,
+    };
+    world.create_entity().with(transform).with(sprite).build()
+}
+
+fn load_sprite_sheet(world: &mut World, png_path: &str, ron_path: &str) -> SpriteSheetHandle {
+    let texture_handle = {
+        let loader = world.read_resource::<Loader>();
+        let texture_storage = world.read_resource::<AssetStorage<Texture>>();
+        loader.load(
+            png_path,
+            PngFormat,
+            TextureMetadata::srgb_scale(),
+            (),
+            &texture_storage,
+        )
+    };
+    let loader = world.read_resource::<Loader>();
+    let sprite_sheet_store = world.read_resource::<AssetStorage<SpriteSheet>>();
+    loader.load(
+        ron_path,
+        SpriteSheetFormat,
+        texture_handle,
+        (),
+        &sprite_sheet_store,
+    )
+}
+
+fn load_player_sprite_sheet(world: &mut World) -> SpriteSheetHandle {
     // Load the sprite sheet necessary to render the graphics.
     // The texture is the pixel data
     // `sprite_sheet` is the layout of the sprites on the image
