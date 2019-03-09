@@ -60,7 +60,9 @@ impl SimpleState for Example {
             load_sprite_sheet(world, "./texture/BG.png", "./texture/BG.ron");
         let _background = init_background_sprite(world, &background_sprite_sheet_handle);
 
-
+        let ground_sprite_sheet_handle =
+            load_sprite_sheet(world, "./texture/ground.png", "./texture/ground.ron");
+        let _ground = init_ground_sprite(world, &ground_sprite_sheet_handle);
 
         world.register::<Player>();
         let sprite_sheet_handle = load_player_sprite_sheet(world);
@@ -141,6 +143,17 @@ fn init_background_sprite(world: &mut World, sprite_sheet: &SpriteSheetHandle) -
     let mut transform = Transform::default();
     transform.set_xyz(500., 500., -10.);
     transform.set_scale(1., 1.5, 1.);
+    let sprite = SpriteRender {
+        sprite_sheet: sprite_sheet.clone(),
+        sprite_number: 0,
+    };
+    world.create_entity().with(transform).with(sprite).build()
+}
+
+fn init_ground_sprite(world: &mut World, sprite_sheet: &SpriteSheetHandle) -> Entity {
+    let mut transform = Transform::default();
+    transform.set_xyz(640., 10., -9.);
+    transform.set_scale(10., 1.0, 1.);
     let sprite = SpriteRender {
         sprite_sheet: sprite_sheet.clone(),
         sprite_number: 0,
@@ -254,7 +267,7 @@ impl<'s> System<'s> for ControlSystem {
             }
 
             let player_y = transform.translation().y;
-            let ground_level = SPRITE_H as f32 / 2.;
+            let ground_level = SPRITE_H as f32 / 2. + 74.;
             let new_y = (player_y + player.y_velocity).max(ground_level); // todo this should consider platforms
             transform.set_y(new_y);
 
