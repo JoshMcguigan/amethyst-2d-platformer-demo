@@ -169,7 +169,6 @@ fn init_camera(world: &mut World) {
 fn init_player(world: &mut World, sprite_sheet_handle: &SpriteSheetHandle) -> Entity {
     let scale = 1.;
 
-
     let mut transform = Transform::default();
     transform.set_scale(scale, scale, scale);
 
@@ -209,14 +208,20 @@ fn init_background_sprite(world: &mut World, sprite_sheet: &SpriteSheetHandle) -
 
 fn init_ground_sprite(world: &mut World, sprite_sheet: &SpriteSheetHandle) -> Entity {
     let mut transform = Transform::default();
-    transform.set_xyz(640., 10., -9.);
-    transform.set_scale(10., 1.0, 1.);
+    transform.set_z(-9.);
+    transform.set_scale(10., 1., 1.);
     let sprite = SpriteRender {
         sprite_sheet: sprite_sheet.clone(),
         sprite_number: 0,
     };
+
+    let mut two_dim_object = TwoDimObject::new(1280., 128.);
+    two_dim_object.set_position(640., 10.);
+    two_dim_object.update_transform_position(&mut transform);
+
     world.create_entity()
         .with(transform)
+        .with(two_dim_object)
         .with(sprite)
         .with(Transparent)
         .build()
