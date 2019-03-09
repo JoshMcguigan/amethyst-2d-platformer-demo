@@ -85,7 +85,7 @@ fn init_player(world: &mut World, sprite_sheet_handle: &SpriteSheetHandle) -> En
 
     let sprite_render = SpriteRender {
         sprite_sheet: sprite_sheet_handle.clone(),
-        sprite_number: 0, // paddle is the first sprite in the sprite_sheet
+        sprite_number: 60, // paddle is the first sprite in the sprite_sheet
     };
 
 
@@ -121,7 +121,7 @@ fn load_sprite_sheet(world: &mut World) -> SpriteSheetHandle {
     let mut sprites = Vec::with_capacity(sprite_count);
 
     let image_w = 200;
-    let image_h = 184 * (sprite_count as u32);
+    let image_h = 13980;
     let sprite_w = 200;
     let sprite_h = 184;
 
@@ -189,10 +189,9 @@ impl<'s> System<'s> for PlayerAnimationSystem {
 
     fn run(&mut self, (players, mut sprites): Self::SystemData) {
         for (mut sprite) in (&mut sprites).join() {
-            if sprite.sprite_number == 1 {
-                sprite.sprite_number = 0;
-            } else {
-                sprite.sprite_number = 1;
+            sprite.sprite_number += 1;
+            if sprite.sprite_number > 74 {
+                sprite.sprite_number = 60;
             }
         }
     }
