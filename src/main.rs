@@ -1,7 +1,7 @@
 use amethyst::{
     assets::{AssetStorage, Loader},
     core::{Transform, TransformBundle},
-    ecs::{Component, Entities, Entity, Join, Read, ReadStorage, System,
+    ecs::{Component, Entities, Entity, Join, Read, System,
           VecStorage, WriteStorage, },
     input::{InputBundle, InputHandler},
     prelude::*,
@@ -13,16 +13,30 @@ use amethyst::{
 };
 use specs_derive::Component;
 
+#[derive(PartialEq, Clone, Copy)]
+pub enum PlayerState {
+    Idle,
+    Walking,
+}
+
+impl Default for PlayerState {
+    fn default() -> Self {
+        PlayerState::Idle
+    }
+}
+
 #[derive(Default, Component)]
 #[storage(VecStorage)]
 pub struct Player {
     ticks: usize,
+    state: PlayerState,
 }
 
 impl Player {
     fn new() -> Self {
         Player {
             ticks: 0,
+            state: PlayerState::Idle
         }
     }
 }
@@ -164,14 +178,15 @@ impl<'s> System<'s> for ControlSystem {
     type SystemData = (
         Entities<'s>,
         WriteStorage<'s, Transform>,
-        ReadStorage<'s, Player>,
+        WriteStorage<'s, Player>,
         Read<'s, InputHandler<String, String>>,
         WriteStorage<'s, Flipped>,
     );
 
-    fn run(&mut self, (entity, mut transforms, _player, input, mut flipped): Self::SystemData) {
-        for (transform, e) in (&mut transforms, &*entity).join() {
-
+    fn run(&mut self, (entity, mut transforms, mut players, input, mut flipped): Self::SystemData) {
+        for (transform, e, mut player) in (&mut transforms, &*entity, &mut players).join() {
+            let current_state = player.state;
+            let mut next_state = PlayerState::Idle; // assume idle until movement detected
             if let Some(mv_amount) = input.axis_value("horizontal") {
                 let player_x = transform.translation().x;
                 transform.set_x(
@@ -186,6 +201,14 @@ impl<'s> System<'s> for ControlSystem {
                         .expect("Failed to flip");
                 }
 
+                if mv_amount != 0. {
+                    next_state = PlayerState::Walking;
+                }
+            }
+
+            if current_state != next_state {
+                player.state = next_state;
+                player.ticks = 0;
             }
         }
     }
@@ -203,9 +226,12 @@ impl<'s> System<'s> for PlayerAnimationSystem {
         for (mut player, mut sprite) in (&mut players, &mut sprites).join() {
             player.ticks = player.ticks.wrapping_add(1);
             let num_walking_sprites = 15;
-            let first_walking_sprite = 60;
+            let sprite_initial_index = match player.state {
+                PlayerState::Idle => 15,
+                PlayerState::Walking => 60,
+            };
             let game_frames_per_animation_frame = 6;
-            sprite.sprite_number = (player.ticks / game_frames_per_animation_frame) % num_walking_sprites + first_walking_sprite;
+            sprite.sprite_number = (player.ticks / game_frames_per_animation_frame) % num_walking_sprites + sprite_initial_index;
         }
     }
 }
