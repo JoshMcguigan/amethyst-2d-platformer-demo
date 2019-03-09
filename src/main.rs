@@ -76,8 +76,13 @@ impl TwoDimObject {
         transform.set_y(self.position.y);
     }
 
-    // todo expose methods for top, right, bottom, left
-    // todo expose setters based on above as helpful
+    fn bottom(&self) -> f32 {
+        self.position.y - self.size.y / 2.
+    }
+
+    fn set_bottom(&mut self, bottom: f32) {
+        self.position.y = bottom + self.size.y / 2.;
+    }
 }
 
 #[derive(Default, Component)]
@@ -312,12 +317,11 @@ impl<'s> System<'s> for ControlSystem {
                 next_state = PlayerState::Walking;
             }
 
-            let player_y = two_dim_object.position.y; // todo replace this logic with bottom getter
-            let ground_level = SPRITE_H as f32 / 2. + 74.;
-            let new_y = (player_y + two_dim_object.velocity.y).max(ground_level); // todo this should consider platforms
-            two_dim_object.position.y = new_y;
+            let ground_level = 74.; // due to height of bottom tiles
+            let new_y = (two_dim_object.bottom() + two_dim_object.velocity.y).max(ground_level); // todo this should consider platforms
+            two_dim_object.set_bottom(new_y);
 
-            let player_on_ground = new_y == ground_level; // todo this should consider platforms
+            let player_on_ground = two_dim_object.bottom() == ground_level; // todo this should consider platforms
 
             if player_on_ground {
                 if input.action_is_down("jump")
