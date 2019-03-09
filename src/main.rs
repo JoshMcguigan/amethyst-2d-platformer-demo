@@ -76,6 +76,10 @@ impl TwoDimObject {
         transform.set_y(self.position.y);
     }
 
+    fn top(&self) -> f32 {
+        self.position.y + self.size.y / 2.
+    }
+
     fn bottom(&self) -> f32 {
         self.position.y - self.size.y / 2.
     }
@@ -85,18 +89,20 @@ impl TwoDimObject {
     }
 }
 
-#[derive(Default, Component)]
+#[derive(Component)]
 #[storage(VecStorage)]
 pub struct Player {
     ticks: usize,
     state: PlayerState,
+    two_dim: TwoDimObject,
 }
 
 impl Player {
-    fn new() -> Self {
+    fn new(two_dim: TwoDimObject) -> Self {
         Player {
             ticks: 0,
             state: PlayerState::Idle,
+            two_dim,
         }
     }
 }
@@ -183,9 +189,8 @@ fn init_player(world: &mut World, sprite_sheet_handle: &SpriteSheetHandle) -> En
 
     world
         .create_entity()
-        .with(two_dim_object)
         .with(transform)
-        .with(Player::new())
+        .with(Player::new(two_dim_object))
         .with(sprite_render)
         .with(Transparent)
         .build()
@@ -311,12 +316,12 @@ impl<'s> System<'s> for ControlSystem {
     );
 
     fn run(&mut self, (entity, mut transforms, mut players, mut two_dim_objects, input, mut flipped): Self::SystemData) {
-        for (mut transform, e, mut player, mut two_dim_object) in (&mut transforms, &*entity, &mut players, &mut two_dim_objects).join() {
+        for (mut transform, e, mut player) in (&mut transforms, &*entity, &mut players).join() {
             let current_state = player.state;
             let mut next_state = PlayerState::Idle; // assume idle until movement detected
 
             let mv_amount = input.axis_value("horizontal").expect("horizontal axis exists");
-            two_dim_object.position.x += mv_amount as f32;
+            player.two_dim.position.x += mv_amount as f32;
 
             if mv_amount > 0. {
                 // face right
@@ -332,27 +337,27 @@ impl<'s> System<'s> for ControlSystem {
             }
 
             let ground_level = 74.; // due to height of bottom tiles
-            let new_y = (two_dim_object.bottom() + two_dim_object.velocity.y).max(ground_level); // todo this should consider platforms
-            two_dim_object.set_bottom(new_y);
+            let new_y = (player.two_dim.bottom() + player.two_dim.velocity.y).max(ground_level); // todo this should consider platforms
+            player.two_dim.set_bottom(new_y);
 
-            let player_on_ground = two_dim_object.bottom() == ground_level; // todo this should consider platforms
+            let player_on_ground = player.two_dim.bottom() == ground_level; // todo this should consider platforms
 
             if player_on_ground {
                 if input.action_is_down("jump")
                     .expect("jump action exists") {
-                    two_dim_object.velocity.y = 20.;
+                    player.two_dim.velocity.y = 20.;
                     next_state = PlayerState::JumpingPosVelocity;
                 } else {
-                    two_dim_object.velocity.y = 0.;
+                    player.two_dim.velocity.y = 0.;
                 };
             } else {
-                if two_dim_object.velocity.y > 0. {
+                if player.two_dim.velocity.y > 0. {
                     next_state = PlayerState::JumpingPosVelocity;
                 } else {
                     next_state = PlayerState::JumpingNegVelocity;
                 }
                 // gravity
-                two_dim_object.velocity.y -= 0.7;
+                player.two_dim.velocity.y -= 0.7;
             }
 
             if current_state != next_state {
@@ -360,7 +365,7 @@ impl<'s> System<'s> for ControlSystem {
                 player.ticks = 0;
             }
 
-            two_dim_object.update_transform_position(&mut transform);
+            player.two_dim.update_transform_position(&mut transform);
         }
     }
 }
