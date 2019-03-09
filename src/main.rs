@@ -30,13 +30,15 @@ impl Default for PlayerState {
 pub struct Player {
     ticks: usize,
     state: PlayerState,
+    y_velocity: f32,
 }
 
 impl Player {
     fn new() -> Self {
         Player {
             ticks: 0,
-            state: PlayerState::Idle
+            state: PlayerState::Idle,
+            y_velocity: 0.,
         }
     }
 }
@@ -187,23 +189,42 @@ impl<'s> System<'s> for ControlSystem {
         for (transform, e, mut player) in (&mut transforms, &*entity, &mut players).join() {
             let current_state = player.state;
             let mut next_state = PlayerState::Idle; // assume idle until movement detected
-            if let Some(mv_amount) = input.axis_value("horizontal") {
-                let player_x = transform.translation().x;
-                transform.set_x(
-                    player_x + mv_amount as f32
-                );
-                if mv_amount > 0. {
-                    // face right
-                    flipped.remove(e);
-                } else if mv_amount < 0. {
-                    // face left
-                    flipped.insert(e, Flipped::Horizontal)
-                        .expect("Failed to flip");
-                }
 
-                if mv_amount != 0. {
-                    next_state = PlayerState::Walking;
-                }
+            let mv_amount = input.axis_value("horizontal").expect("horizontal axis exists");
+            let player_x = transform.translation().x;
+            transform.set_x(
+                player_x + mv_amount as f32
+            );
+            if mv_amount > 0. {
+                // face right
+                flipped.remove(e);
+            } else if mv_amount < 0. {
+                // face left
+                flipped.insert(e, Flipped::Horizontal)
+                    .expect("Failed to flip");
+            }
+
+            if mv_amount != 0. {
+                next_state = PlayerState::Walking;
+            }
+
+            let player_y = transform.translation().y;
+            let ground_level = 184. / 2.;
+            let new_y = (player_y + player.y_velocity).max(ground_level); // todo this should consider platforms
+            transform.set_y(new_y);
+
+            let player_on_ground = new_y == ground_level; // todo this should consider platforms
+
+            if player_on_ground {
+                if input.action_is_down("jump")
+                    .expect("jump action exists") {
+                    player.y_velocity = 20.;
+                } else {
+                    player.y_velocity = 0.;
+                };
+            } else {
+                // gravity
+                player.y_velocity -= 0.7;
             }
 
             if current_state != next_state {

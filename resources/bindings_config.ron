@@ -2,5 +2,7 @@
   axes: {
     "horizontal": Emulated(pos: Key(Right), neg: Key(Left)),
   },
-  actions: {},
+  actions: {
+    "jump": [ [Key(Up)] ],
+  },
 )
