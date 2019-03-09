@@ -87,6 +87,18 @@ impl TwoDimObject {
     fn set_bottom(&mut self, bottom: f32) {
         self.position.y = bottom + self.size.y / 2.;
     }
+
+    fn left(&self) -> f32 {
+        self.position.x - self.size.x / 2.
+    }
+
+    fn right(&self) -> f32 {
+        self.position.x + self.size.x / 2.
+    }
+
+    fn overlapping_x(&self, other: &Self) -> bool {
+        self.right() >= other.left() || self.left() <= other.right()
+    }
 }
 
 #[derive(Component)]
@@ -184,7 +196,7 @@ fn init_player(world: &mut World, sprite_sheet_handle: &SpriteSheetHandle) -> En
     };
 
     let mut two_dim_object = TwoDimObject::new(SPRITE_W as f32, SPRITE_H as f32);
-    two_dim_object.set_position(500., (SPRITE_H as f32 * scale) / 2.);
+    two_dim_object.set_position(500., 500.);
     two_dim_object.update_transform_position(&mut transform);
 
     world
@@ -336,11 +348,22 @@ impl<'s> System<'s> for ControlSystem {
                 next_state = PlayerState::Walking;
             }
 
-            let ground_level = 74.; // due to height of bottom tiles
-            let new_y = (player.two_dim.bottom() + player.two_dim.velocity.y).max(ground_level); // todo this should consider platforms
-            player.two_dim.set_bottom(new_y);
+            let old_y = player.two_dim.bottom();
+            let possible_new_y = (player.two_dim.bottom() + player.two_dim.velocity.y);
+            let mut new_y = possible_new_y;
 
-            let player_on_ground = player.two_dim.bottom() == ground_level; // todo this should consider platforms
+            let mut player_on_ground = false;
+
+            for (two_dim_object) in (&two_dim_objects).join() {
+                if player.two_dim.overlapping_x(two_dim_object)
+                    && old_y >= two_dim_object.top()
+                    && new_y <= two_dim_object.top() {
+                    player_on_ground = true;
+                    new_y = two_dim_object.top();
+                }
+            }
+
+            player.two_dim.set_bottom(new_y);
 
             if player_on_ground {
                 if input.action_is_down("jump")
