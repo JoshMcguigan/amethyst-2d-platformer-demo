@@ -146,7 +146,7 @@ fn load_sprite_sheet(world: &mut World) -> SpriteSheetHandle {
 
     let image_w = 200;
     let image_h = 13980;
-    let sprite_w = 200;
+    let sprite_w = 90;
     let sprite_h = 184;
 
     for i in 0..(sprite_count as u32) {
