@@ -17,6 +17,8 @@ use specs_derive::Component;
 pub enum PlayerState {
     Idle,
     Walking,
+    JumpingPosVelocity,
+    JumpingNegVelocity,
 }
 
 impl Default for PlayerState {
@@ -219,10 +221,16 @@ impl<'s> System<'s> for ControlSystem {
                 if input.action_is_down("jump")
                     .expect("jump action exists") {
                     player.y_velocity = 20.;
+                    next_state = PlayerState::JumpingPosVelocity;
                 } else {
                     player.y_velocity = 0.;
                 };
             } else {
+                if player.y_velocity > 0. {
+                    next_state = PlayerState::JumpingPosVelocity;
+                } else {
+                    next_state = PlayerState::JumpingNegVelocity;
+                }
                 // gravity
                 player.y_velocity -= 0.7;
             }
@@ -246,13 +254,14 @@ impl<'s> System<'s> for PlayerAnimationSystem {
     fn run(&mut self, (mut players, mut sprites): Self::SystemData) {
         for (mut player, mut sprite) in (&mut players, &mut sprites).join() {
             player.ticks = player.ticks.wrapping_add(1);
-            let num_walking_sprites = 15;
-            let sprite_initial_index = match player.state {
-                PlayerState::Idle => 15,
-                PlayerState::Walking => 60,
+            let (sprite_initial_index, num_sprites) = match player.state {
+                PlayerState::Idle => (15, 15),
+                PlayerState::Walking => (60, 15),
+                PlayerState::JumpingPosVelocity => (35, 5),
+                PlayerState::JumpingNegVelocity => (35, 5),
             };
             let game_frames_per_animation_frame = 6;
-            sprite.sprite_number = (player.ticks / game_frames_per_animation_frame) % num_walking_sprites + sprite_initial_index;
+            sprite.sprite_number = (player.ticks / game_frames_per_animation_frame) % num_sprites + sprite_initial_index;
         }
     }
 }
