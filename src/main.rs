@@ -32,12 +32,59 @@ impl Default for PlayerState {
     }
 }
 
+pub struct TwoDimVector<T> {
+    x: T,
+    y: T,
+}
+
+impl Default for TwoDimVector<f32> {
+    fn default() -> Self {
+        Self {
+            x: 0.0,
+            y: 0.0,
+        }
+    }
+}
+
+#[derive(Component)]
+#[storage(VecStorage)]
+pub struct TwoDimObject {
+    size: TwoDimVector<f32>,
+    position: TwoDimVector<f32>,
+    velocity: TwoDimVector<f32>,
+}
+
+impl TwoDimObject {
+    fn new(width: f32, height: f32) -> Self {
+        TwoDimObject {
+            size: TwoDimVector { x: width, y: height },
+            position: TwoDimVector { x: 0., y: 0. },
+            velocity: TwoDimVector { x: 0., y: 0. },
+        }
+    }
+
+    fn set_position(&mut self, x: f32, y: f32) {
+        self.position = TwoDimVector { x, y };
+    }
+
+    fn set_velocity(&mut self, x: f32, y: f32) {
+        self.velocity = TwoDimVector { x, y };
+    }
+
+    fn update_transform_position(&self, transform: &mut Transform) {
+        transform.set_x(self.position.x);
+        transform.set_y(self.position.y);
+    }
+
+    // todo expose methods for top, right, bottom, left
+    // todo expose setters based on above as helpful
+}
+
 #[derive(Default, Component)]
 #[storage(VecStorage)]
 pub struct Player {
     ticks: usize,
     state: PlayerState,
-    y_velocity: f32,
 }
 
 impl Player {
@@ -45,7 +92,6 @@ impl Player {
         Player {
             ticks: 0,
             state: PlayerState::Idle,
-            y_velocity: 0.,
         }
     }
 }
@@ -68,7 +114,7 @@ impl SimpleState for Example {
         let sprite_sheet_handle = load_player_sprite_sheet(world);
         init_player(world, &sprite_sheet_handle);
 
-        init_camera(world)
+        init_camera(world);
     }
 }
 
@@ -120,9 +166,6 @@ fn init_player(world: &mut World, sprite_sheet_handle: &SpriteSheetHandle) -> En
 
 
     let mut transform = Transform::default();
-    transform.set_x(500.);
-    transform.set_y((SPRITE_H as f32 * scale) / 2.);
-
     transform.set_scale(scale, scale, scale);
 
     let sprite_render = SpriteRender {
@@ -130,9 +173,13 @@ fn init_player(world: &mut World, sprite_sheet_handle: &SpriteSheetHandle) -> En
         sprite_number: 60, // paddle is the first sprite in the sprite_sheet
     };
 
+    let mut two_dim_object = TwoDimObject::new(SPRITE_W as f32, SPRITE_H as f32);
+    two_dim_object.set_position(500., (SPRITE_H as f32 * scale) / 2.);
+    two_dim_object.update_transform_position(&mut transform);
 
     world
         .create_entity()
+        .with(two_dim_object)
         .with(transform)
         .with(Player::new())
         .with(sprite_render)
@@ -239,20 +286,19 @@ impl<'s> System<'s> for ControlSystem {
         Entities<'s>,
         WriteStorage<'s, Transform>,
         WriteStorage<'s, Player>,
+        WriteStorage<'s, TwoDimObject>,
         Read<'s, InputHandler<String, String>>,
         WriteStorage<'s, Flipped>,
     );
 
-    fn run(&mut self, (entity, mut transforms, mut players, input, mut flipped): Self::SystemData) {
-        for (transform, e, mut player) in (&mut transforms, &*entity, &mut players).join() {
+    fn run(&mut self, (entity, mut transforms, mut players, mut two_dim_objects, input, mut flipped): Self::SystemData) {
+        for (mut transform, e, mut player, mut two_dim_object) in (&mut transforms, &*entity, &mut players, &mut two_dim_objects).join() {
             let current_state = player.state;
             let mut next_state = PlayerState::Idle; // assume idle until movement detected
 
             let mv_amount = input.axis_value("horizontal").expect("horizontal axis exists");
-            let player_x = transform.translation().x;
-            transform.set_x(
-                player_x + mv_amount as f32
-            );
+            two_dim_object.position.x += mv_amount as f32;
+
             if mv_amount > 0. {
                 // face right
                 flipped.remove(e);
@@ -266,35 +312,37 @@ impl<'s> System<'s> for ControlSystem {
                 next_state = PlayerState::Walking;
             }
 
-            let player_y = transform.translation().y;
+            let player_y = two_dim_object.position.y; // todo replace this logic with bottom getter
             let ground_level = SPRITE_H as f32 / 2. + 74.;
-            let new_y = (player_y + player.y_velocity).max(ground_level); // todo this should consider platforms
-            transform.set_y(new_y);
+            let new_y = (player_y + two_dim_object.velocity.y).max(ground_level); // todo this should consider platforms
+            two_dim_object.position.y = new_y;
 
             let player_on_ground = new_y == ground_level; // todo this should consider platforms
 
             if player_on_ground {
                 if input.action_is_down("jump")
                     .expect("jump action exists") {
-                    player.y_velocity = 20.;
+                    two_dim_object.velocity.y = 20.;
                     next_state = PlayerState::JumpingPosVelocity;
                 } else {
-                    player.y_velocity = 0.;
+                    two_dim_object.velocity.y = 0.;
                 };
             } else {
-                if player.y_velocity > 0. {
+                if two_dim_object.velocity.y > 0. {
                     next_state = PlayerState::JumpingPosVelocity;
                 } else {
                     next_state = PlayerState::JumpingNegVelocity;
                 }
                 // gravity
-                player.y_velocity -= 0.7;
+                two_dim_object.velocity.y -= 0.7;
             }
 
             if current_state != next_state {
                 player.state = next_state;
                 player.ticks = 0;
             }
+
+            two_dim_object.update_transform_position(&mut transform);
         }
     }
 }
