@@ -8,7 +8,7 @@ use amethyst::{
     renderer::{
         ALPHA, Camera, ColorMask, DisplayConfig, DrawFlat2D, Flipped, Pipeline, PngFormat,
         Projection, RenderBundle, Sprite, SpriteRender, SpriteSheet,
-        SpriteSheetHandle, Stage, Texture, TextureMetadata, SpriteSheetFormat,
+        SpriteSheetHandle, Stage, Texture, TextureMetadata, SpriteSheetFormat, Transparent
     },
 };
 use specs_derive::Component;
@@ -188,6 +188,7 @@ fn init_player(world: &mut World, sprite_sheet_handle: &SpriteSheetHandle) -> En
         .with(transform)
         .with(Player::new())
         .with(sprite_render)
+        .with(Transparent)
         .build()
 }
 
@@ -199,7 +200,11 @@ fn init_background_sprite(world: &mut World, sprite_sheet: &SpriteSheetHandle) -
         sprite_sheet: sprite_sheet.clone(),
         sprite_number: 0,
     };
-    world.create_entity().with(transform).with(sprite).build()
+    world.create_entity()
+        .with(transform)
+        .with(sprite)
+        .with(Transparent)
+        .build()
 }
 
 fn init_ground_sprite(world: &mut World, sprite_sheet: &SpriteSheetHandle) -> Entity {
@@ -210,7 +215,11 @@ fn init_ground_sprite(world: &mut World, sprite_sheet: &SpriteSheetHandle) -> En
         sprite_sheet: sprite_sheet.clone(),
         sprite_number: 0,
     };
-    world.create_entity().with(transform).with(sprite).build()
+    world.create_entity()
+        .with(transform)
+        .with(sprite)
+        .with(Transparent)
+        .build()
 }
 
 fn load_sprite_sheet(world: &mut World, png_path: &str, ron_path: &str) -> SpriteSheetHandle {
