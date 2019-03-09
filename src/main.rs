@@ -80,6 +80,10 @@ impl TwoDimObject {
         self.position.y + self.size.y / 2.
     }
 
+    fn set_top(&mut self, top: f32) {
+        self.position.y = top - self.size.y / 2.;
+    }
+
     fn bottom(&self) -> f32 {
         self.position.y - self.size.y / 2.
     }
@@ -92,12 +96,16 @@ impl TwoDimObject {
         self.position.x - self.size.x / 2.
     }
 
+    fn set_left(&mut self, left: f32) {
+        self.position.x = left + self.size.x / 2.;
+    }
+
     fn right(&self) -> f32 {
         self.position.x + self.size.x / 2.
     }
 
     fn overlapping_x(&self, other: &Self) -> bool {
-        self.right() >= other.left() || self.left() <= other.right()
+        self.right() >= other.left() && self.left() <= other.right()
     }
 }
 
@@ -132,6 +140,10 @@ impl SimpleState for Example {
         let ground_sprite_sheet_handle =
             load_sprite_sheet(world, "./texture/ground.png", "./texture/ground.ron");
         let _ground = init_ground_sprite(world, &ground_sprite_sheet_handle);
+
+        let crate_sprite_sheet_handle =
+            load_sprite_sheet(world, "./texture/Crate.png", "./texture/Crate.ron");
+        let _crate = init_crate_sprite(world, &crate_sprite_sheet_handle);
 
         world.register::<Player>();
         let sprite_sheet_handle = load_player_sprite_sheet(world);
@@ -233,7 +245,29 @@ fn init_ground_sprite(world: &mut World, sprite_sheet: &SpriteSheetHandle) -> En
     };
 
     let mut two_dim_object = TwoDimObject::new(1280., 128.);
-    two_dim_object.set_position(640., 10.);
+    two_dim_object.set_left(0.);
+    two_dim_object.set_top(74.);
+    two_dim_object.update_transform_position(&mut transform);
+
+    world.create_entity()
+        .with(transform)
+        .with(two_dim_object)
+        .with(sprite)
+        .with(Transparent)
+        .build()
+}
+
+fn init_crate_sprite(world: &mut World, sprite_sheet: &SpriteSheetHandle) -> Entity {
+    let mut transform = Transform::default();
+    transform.set_z(-9.);
+    let sprite = SpriteRender {
+        sprite_sheet: sprite_sheet.clone(),
+        sprite_number: 0,
+    };
+
+    let mut two_dim_object = TwoDimObject::new(77., 77.);
+    two_dim_object.set_left(0.);
+    two_dim_object.set_bottom(74.);
     two_dim_object.update_transform_position(&mut transform);
 
     world.create_entity()
@@ -349,12 +383,12 @@ impl<'s> System<'s> for ControlSystem {
             }
 
             let old_y = player.two_dim.bottom();
-            let possible_new_y = (player.two_dim.bottom() + player.two_dim.velocity.y);
+            let possible_new_y = player.two_dim.bottom() + player.two_dim.velocity.y;
             let mut new_y = possible_new_y;
 
             let mut player_on_ground = false;
 
-            for (two_dim_object) in (&two_dim_objects).join() {
+            for two_dim_object in (&two_dim_objects).join() {
                 if player.two_dim.overlapping_x(two_dim_object)
                     && old_y >= two_dim_object.top()
                     && new_y <= two_dim_object.top() {
