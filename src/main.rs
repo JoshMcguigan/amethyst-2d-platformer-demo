@@ -257,8 +257,8 @@ impl<'s> System<'s> for PlayerAnimationSystem {
             let (sprite_initial_index, num_sprites) = match player.state {
                 PlayerState::Idle => (15, 15),
                 PlayerState::Walking => (60, 15),
-                PlayerState::JumpingPosVelocity => (35, 5),
-                PlayerState::JumpingNegVelocity => (35, 5),
+                PlayerState::JumpingPosVelocity => (35, 7),
+                PlayerState::JumpingNegVelocity => (35, 7),
             };
             let game_frames_per_animation_frame = 6;
             sprite.sprite_number = (player.ticks / game_frames_per_animation_frame) % num_sprites + sprite_initial_index;
