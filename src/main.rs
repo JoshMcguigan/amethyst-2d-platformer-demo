@@ -6,7 +6,8 @@ use amethyst::{
     prelude::*,
     renderer::{
         Camera, DisplayConfig, DrawFlat2D, Pipeline, PngFormat, Projection, RenderBundle, Stage,
-        Texture, TextureHandle, TextureMetadata, ALPHA, ColorMask, ScreenDimensions, Flipped
+        Texture, TextureHandle, TextureMetadata, ALPHA, ColorMask, ScreenDimensions, Flipped,
+        SpriteSheet, SpriteSheetFormat, SpriteSheetHandle, SpriteRender,
     },
     input::{InputBundle, InputHandler},
 };
@@ -21,11 +22,11 @@ struct Example;
 impl SimpleState for Example {
     fn on_start(&mut self, data: StateData<'_, GameData<'_, '_>>) {
         let world = data.world;
-        let texture_handle = load_texture(world, "./texture/boy/Idle (1).png");
+
+        let sprite_sheet_handle = load_sprite_sheet(world);
 
         world.register::<Player>();
-
-        init_player(world, &texture_handle);
+        init_player(world, &sprite_sheet_handle);
 
         init_camera(world)
     }
@@ -70,7 +71,7 @@ fn init_camera(world: &mut World) {
         .build();
 }
 
-fn init_player(world: &mut World, texture: &TextureHandle) -> Entity {
+fn init_player(world: &mut World, sprite_sheet_handle: &SpriteSheetHandle) -> Entity {
     let width = 614;
     let height = 564;
     let scale = 0.3;
@@ -81,26 +82,47 @@ fn init_player(world: &mut World, texture: &TextureHandle) -> Entity {
 
     transform.set_scale(scale, scale, scale);
 
+    let sprite_render = SpriteRender {
+        sprite_sheet: sprite_sheet_handle.clone(),
+        sprite_number: 0, // paddle is the first sprite in the sprite_sheet
+    };
+
+
     world
         .create_entity()
         .with(transform)
         .with(Player)
-        .with(texture.clone())
+        .with(sprite_render)
         .build()
 }
 
-fn load_texture(world: &mut World, png_path: &str) -> TextureHandle {
+fn load_sprite_sheet(world: &mut World) -> SpriteSheetHandle {
+    // Load the sprite sheet necessary to render the graphics.
+    // The texture is the pixel data
+    // `sprite_sheet` is the layout of the sprites on the image
+    // `texture_handle` is a cloneable reference to the texture
+    let texture_handle = {
+        let loader = world.read_resource::<Loader>();
+        let texture_storage = world.read_resource::<AssetStorage<Texture>>();
+        loader.load(
+            "./texture/css_sprites.png",
+            PngFormat,
+            TextureMetadata::srgb_scale(),
+            (),
+            &texture_storage,
+        )
+    };
+
     let loader = world.read_resource::<Loader>();
-    let texture_storage = world.read_resource::<AssetStorage<Texture>>();
+    let sprite_sheet_store = world.read_resource::<AssetStorage<SpriteSheet>>();
     loader.load(
-        png_path,
-        PngFormat,
-        TextureMetadata::srgb_scale(),
+        "./texture/css_sprites.ron", // Here we load the associated ron file
+        SpriteSheetFormat,
+        texture_handle, // We pass it the texture we want it to use
         (),
-        &texture_storage,
+        &sprite_sheet_store,
     )
 }
-
 
 pub struct ControlSystem;
 
