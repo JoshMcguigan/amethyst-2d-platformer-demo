@@ -7,7 +7,7 @@ use amethyst::{
     renderer::{
         Camera, DisplayConfig, DrawFlat2D, Pipeline, PngFormat, Projection, RenderBundle, Stage,
         Texture, TextureHandle, TextureMetadata, ALPHA, ColorMask, ScreenDimensions, Flipped,
-        SpriteSheet, SpriteSheetFormat, SpriteSheetHandle, SpriteRender,
+        SpriteSheet, SpriteSheetFormat, SpriteSheetHandle, SpriteRender, Sprite
     },
     input::{InputBundle, InputHandler},
 };
@@ -73,9 +73,9 @@ fn init_camera(world: &mut World) {
 }
 
 fn init_player(world: &mut World, sprite_sheet_handle: &SpriteSheetHandle) -> Entity {
-    let width = 614;
-    let height = 564;
-    let scale = 0.3;
+    let width = 200;
+    let height = 184;
+    let scale = 1.;
 
     let mut transform = Transform::default();
     transform.set_x(500.);
@@ -106,7 +106,7 @@ fn load_sprite_sheet(world: &mut World) -> SpriteSheetHandle {
         let loader = world.read_resource::<Loader>();
         let texture_storage = world.read_resource::<AssetStorage<Texture>>();
         loader.load(
-            "./texture/css_sprites.png",
+            "./texture/spritesheet.png",
             PngFormat,
             TextureMetadata::srgb_scale(),
             (),
@@ -116,12 +116,35 @@ fn load_sprite_sheet(world: &mut World) -> SpriteSheetHandle {
 
     let loader = world.read_resource::<Loader>();
     let sprite_sheet_store = world.read_resource::<AssetStorage<SpriteSheet>>();
-    loader.load(
-        "./texture/css_sprites.ron", // Here we load the associated ron file
-        SpriteSheetFormat,
-        texture_handle, // We pass it the texture we want it to use
+
+    let sprite_count = 75; // number of sprites
+    let mut sprites = Vec::with_capacity(sprite_count);
+
+    let image_w = 200;
+    let image_h = 184 * (sprite_count as u32);
+    let sprite_w = 200;
+    let sprite_h = 184;
+
+    for i in 0..(sprite_count as u32) {
+        let offset_x = 0;
+        let offset_y = sprite_h * i;
+        let offsets = [0.; 2]; // Align the sprite with the middle of the entity.
+
+        let sprite = Sprite::from_pixel_values(
+            image_w, image_h, sprite_w, sprite_h, offset_x, offset_y, offsets,
+        );
+        sprites.push(sprite);
+    }
+
+    let sprite_sheet = SpriteSheet {
+        texture: texture_handle,
+        sprites,
+    };
+
+    loader.load_from_data(
+        sprite_sheet,
         (),
-        &sprite_sheet_store,
+        &world.read_resource::<AssetStorage<SpriteSheet>>(),
     )
 }
 
