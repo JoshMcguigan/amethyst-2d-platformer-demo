@@ -17,6 +17,9 @@ const SPRITE_W: u32 = 90;
 const TOTAL_SPRITE_HEIGHT: u32 = 184;
 const SPRITE_Y_PADDING: u32 = 20; // pixels between sprites
 const SPRITE_H: u32 = TOTAL_SPRITE_HEIGHT - SPRITE_Y_PADDING;
+const GROUND_Y: f32 = 74.;
+const CRATE_SIZE: f32 = 77.;
+const DISPLAY_WIDTH: f32 = 1000.;
 
 #[derive(PartialEq, Clone, Copy)]
 pub enum PlayerState {
@@ -135,15 +138,17 @@ impl SimpleState for Example {
 
         let background_sprite_sheet_handle =
             load_sprite_sheet(world, "./texture/BG.png", "./texture/BG.ron");
-        let _background = init_background_sprite(world, &background_sprite_sheet_handle);
+        init_background_sprite(world, &background_sprite_sheet_handle);
 
         let ground_sprite_sheet_handle =
             load_sprite_sheet(world, "./texture/ground.png", "./texture/ground.ron");
-        let _ground = init_ground_sprite(world, &ground_sprite_sheet_handle);
+        init_ground_sprite(world, &ground_sprite_sheet_handle);
 
         let crate_sprite_sheet_handle =
             load_sprite_sheet(world, "./texture/Crate.png", "./texture/Crate.ron");
-        let _crate = init_crate_sprite(world, &crate_sprite_sheet_handle);
+        init_crate_sprite(world, &crate_sprite_sheet_handle, 0., GROUND_Y);
+        init_crate_sprite(world, &crate_sprite_sheet_handle, CRATE_SIZE, GROUND_Y);
+        init_crate_sprite(world, &crate_sprite_sheet_handle, 0., GROUND_Y + CRATE_SIZE);
 
         world.register::<Player>();
         let sprite_sheet_handle = load_player_sprite_sheet(world);
@@ -188,7 +193,7 @@ fn init_camera(world: &mut World) {
         .create_entity()
         .with(Camera::from(Projection::orthographic(
             0.0,
-            1000., // todo set this by screen size?
+            DISPLAY_WIDTH, // todo set this by screen size?
             0.0,
             1000.,
         )))
@@ -246,7 +251,7 @@ fn init_ground_sprite(world: &mut World, sprite_sheet: &SpriteSheetHandle) -> En
 
     let mut two_dim_object = TwoDimObject::new(1280., 128.);
     two_dim_object.set_left(0.);
-    two_dim_object.set_top(74.);
+    two_dim_object.set_top(GROUND_Y);
     two_dim_object.update_transform_position(&mut transform);
 
     world.create_entity()
@@ -257,7 +262,7 @@ fn init_ground_sprite(world: &mut World, sprite_sheet: &SpriteSheetHandle) -> En
         .build()
 }
 
-fn init_crate_sprite(world: &mut World, sprite_sheet: &SpriteSheetHandle) -> Entity {
+fn init_crate_sprite(world: &mut World, sprite_sheet: &SpriteSheetHandle, left: f32, bottom: f32) -> Entity {
     let mut transform = Transform::default();
     transform.set_z(-9.);
     let sprite = SpriteRender {
@@ -265,9 +270,9 @@ fn init_crate_sprite(world: &mut World, sprite_sheet: &SpriteSheetHandle) -> Ent
         sprite_number: 0,
     };
 
-    let mut two_dim_object = TwoDimObject::new(77., 77.);
-    two_dim_object.set_left(0.);
-    two_dim_object.set_bottom(74.);
+    let mut two_dim_object = TwoDimObject::new(CRATE_SIZE, CRATE_SIZE);
+    two_dim_object.set_left(left);
+    two_dim_object.set_bottom(bottom);
     two_dim_object.update_transform_position(&mut transform);
 
     world.create_entity()
