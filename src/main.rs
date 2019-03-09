@@ -13,6 +13,11 @@ use amethyst::{
 };
 use specs_derive::Component;
 
+const SPRITE_W: u32 = 90;
+const TOTAL_SPRITE_HEIGHT: u32 = 184;
+const SPRITE_Y_PADDING: u32 = 20; // pixels between sprites
+const SPRITE_H: u32 = TOTAL_SPRITE_HEIGHT - SPRITE_Y_PADDING;
+
 #[derive(PartialEq, Clone, Copy)]
 pub enum PlayerState {
     Idle,
@@ -101,14 +106,12 @@ fn init_camera(world: &mut World) {
 }
 
 fn init_player(world: &mut World, sprite_sheet_handle: &SpriteSheetHandle) -> Entity {
-    let _width = 200;
-    let height = 164;
     let scale = 1.;
 
 
     let mut transform = Transform::default();
     transform.set_x(500.);
-    transform.set_y((height as f32 * scale) / 2.);
+    transform.set_y((SPRITE_H as f32 * scale) / 2.);
 
     transform.set_scale(scale, scale, scale);
 
@@ -150,18 +153,14 @@ fn load_sprite_sheet(world: &mut World) -> SpriteSheetHandle {
 
     let image_w = 200;
     let image_h = 13980;
-    let sprite_w = 90;
-    let total_sprite_height = 184;
-    let sprite_y_padding = 20; // pixels between sprites
-    let sprite_h = total_sprite_height - sprite_y_padding;
 
     for i in 0..(sprite_count as u32) {
         let offset_x = 0;
-        let offset_y = total_sprite_height * i;
+        let offset_y = TOTAL_SPRITE_HEIGHT * i;
         let offsets = [0.; 2]; // Align the sprite with the middle of the entity.
 
         let sprite = Sprite::from_pixel_values(
-            image_w, image_h, sprite_w, sprite_h, offset_x, offset_y, offsets,
+            image_w, image_h, SPRITE_W, SPRITE_H, offset_x, offset_y, offsets,
         );
         sprites.push(sprite);
     }
@@ -213,7 +212,7 @@ impl<'s> System<'s> for ControlSystem {
             }
 
             let player_y = transform.translation().y;
-            let ground_level = 164. / 2.;
+            let ground_level = SPRITE_H as f32 / 2.;
             let new_y = (player_y + player.y_velocity).max(ground_level); // todo this should consider platforms
             transform.set_y(new_y);
 
