@@ -1,21 +1,31 @@
 use amethyst::{
     assets::{AssetStorage, Loader},
     core::{Transform, TransformBundle},
-    ecs::{Entity, Read, ReadStorage, WriteStorage, System, Join, Component, DenseVecStorage,
-          NullStorage, Entities, },
+    ecs::{Component, Entities, Entity, Join, Read, ReadStorage, System,
+          VecStorage, WriteStorage, },
+    input::{InputBundle, InputHandler},
     prelude::*,
     renderer::{
-        Camera, DisplayConfig, DrawFlat2D, Pipeline, PngFormat, Projection, RenderBundle, Stage,
-        Texture, TextureHandle, TextureMetadata, ALPHA, ColorMask, ScreenDimensions, Flipped,
-        SpriteSheet, SpriteSheetFormat, SpriteSheetHandle, SpriteRender, Sprite
+        ALPHA, Camera, ColorMask, DisplayConfig, DrawFlat2D, Flipped, Pipeline, PngFormat,
+        Projection, RenderBundle, Sprite, SpriteRender, SpriteSheet,
+        SpriteSheetHandle, Stage, Texture, TextureMetadata
     },
-    input::{InputBundle, InputHandler},
 };
-use specs_derive::{Component};
+use specs_derive::Component;
 
 #[derive(Default, Component)]
-#[storage(NullStorage)]
-pub struct Player;
+#[storage(VecStorage)]
+pub struct Player {
+    ticks: usize,
+}
+
+impl Player {
+    fn new() -> Self {
+        Player {
+            ticks: 0,
+        }
+    }
+}
 
 struct Example;
 
@@ -73,9 +83,10 @@ fn init_camera(world: &mut World) {
 }
 
 fn init_player(world: &mut World, sprite_sheet_handle: &SpriteSheetHandle) -> Entity {
-    let width = 200;
+    let _width = 200;
     let height = 184;
     let scale = 1.;
+
 
     let mut transform = Transform::default();
     transform.set_x(500.);
@@ -92,7 +103,7 @@ fn init_player(world: &mut World, sprite_sheet_handle: &SpriteSheetHandle) -> En
     world
         .create_entity()
         .with(transform)
-        .with(Player)
+        .with(Player::new())
         .with(sprite_render)
         .build()
 }
@@ -115,7 +126,6 @@ fn load_sprite_sheet(world: &mut World) -> SpriteSheetHandle {
     };
 
     let loader = world.read_resource::<Loader>();
-    let sprite_sheet_store = world.read_resource::<AssetStorage<SpriteSheet>>();
 
     let sprite_count = 75; // number of sprites
     let mut sprites = Vec::with_capacity(sprite_count);
@@ -159,8 +169,9 @@ impl<'s> System<'s> for ControlSystem {
         WriteStorage<'s, Flipped>,
     );
 
-    fn run(&mut self, (entity, mut transforms, player, input, mut flipped): Self::SystemData) {
-        for (mut transform, player, e) in (&mut transforms, &player, &*entity).join() {
+    fn run(&mut self, (entity, mut transforms, _player, input, mut flipped): Self::SystemData) {
+        for (transform, e) in (&mut transforms, &*entity).join() {
+
             if let Some(mv_amount) = input.axis_value("horizontal") {
                 let player_x = transform.translation().x;
                 transform.set_x(
@@ -171,7 +182,8 @@ impl<'s> System<'s> for ControlSystem {
                     flipped.remove(e);
                 } else if mv_amount < 0. {
                     // face left
-                    flipped.insert(e, Flipped::Horizontal);
+                    flipped.insert(e, Flipped::Horizontal)
+                        .expect("Failed to flip");
                 }
 
             }
@@ -183,16 +195,17 @@ pub struct PlayerAnimationSystem;
 
 impl<'s> System<'s> for PlayerAnimationSystem {
     type SystemData = (
-        ReadStorage<'s, Player>,
+        WriteStorage<'s, Player>,
         WriteStorage<'s, SpriteRender>,
     );
 
-    fn run(&mut self, (players, mut sprites): Self::SystemData) {
-        for (mut sprite) in (&mut sprites).join() {
-            sprite.sprite_number += 1;
-            if sprite.sprite_number > 74 {
-                sprite.sprite_number = 60;
-            }
+    fn run(&mut self, (mut players, mut sprites): Self::SystemData) {
+        for (mut player, mut sprite) in (&mut players, &mut sprites).join() {
+            player.ticks = player.ticks.wrapping_add(1);
+            let num_walking_sprites = 15;
+            let first_walking_sprite = 60;
+            let game_frames_per_animation_frame = 6;
+            sprite.sprite_number = (player.ticks / game_frames_per_animation_frame) % num_walking_sprites + first_walking_sprite;
         }
     }
 }
