@@ -47,7 +47,8 @@ fn main() -> amethyst::Result<()> {
         .with_bundle(TransformBundle::new())?
         .with_bundle(input_bundle)?
         .with_bundle(RenderBundle::new(pipe, Some(config)).with_sprite_sheet_processor())?
-        .with(ControlSystem, "control_system", &[]);
+        .with(ControlSystem, "control_system", &[])
+        .with(PlayerAnimationSystem, "player_animation_system", &[]);
 
     let mut game = Application::build("./", Example)?.build(game_data)?;
     game.run();
@@ -150,6 +151,25 @@ impl<'s> System<'s> for ControlSystem {
                     flipped.insert(e, Flipped::Horizontal);
                 }
 
+            }
+        }
+    }
+}
+
+pub struct PlayerAnimationSystem;
+
+impl<'s> System<'s> for PlayerAnimationSystem {
+    type SystemData = (
+        ReadStorage<'s, Player>,
+        WriteStorage<'s, SpriteRender>,
+    );
+
+    fn run(&mut self, (players, mut sprites): Self::SystemData) {
+        for (mut sprite) in (&mut sprites).join() {
+            if sprite.sprite_number == 1 {
+                sprite.sprite_number = 0;
+            } else {
+                sprite.sprite_number = 1;
             }
         }
     }
