@@ -450,23 +450,52 @@ impl<'s> System<'s> for PhysicsSystem {
                 player.two_dim.set_left(possible_new_x);
             };
 
-            // todo consider collisions from the bottom?
-            let old_y = player.two_dim.bottom();
-            let possible_new_y = player.two_dim.bottom() + player.two_dim.velocity.y;
-            let mut new_y = possible_new_y;
+            let player_on_ground = if player.two_dim.velocity.y > 0. {
+                let old_y = player.two_dim.top();
+                let possible_new_y = player.two_dim.top() + player.two_dim.velocity.y;
+                let mut new_y = possible_new_y;
 
-            let mut player_on_ground = false;
-
-            for two_dim_object in (&two_dim_objects).join() {
-                if player.two_dim.overlapping_x(two_dim_object)
-                    && old_y >= two_dim_object.top()
-                    && new_y <= two_dim_object.top() {
-                    player_on_ground = true;
-                    new_y = two_dim_object.top();
+                for two_dim_object in (&two_dim_objects).join() {
+                    if player.two_dim.overlapping_x(two_dim_object)
+                        && old_y <= two_dim_object.bottom()
+                        && new_y >= two_dim_object.bottom() {
+                        new_y = two_dim_object.bottom();
+                        player.two_dim.velocity.y = 0.;
+                    }
                 }
-            }
+                player.two_dim.set_top(new_y);
 
-            player.two_dim.set_bottom(new_y);
+                false
+            } else if player.two_dim.velocity.y < 0. {
+                let old_y = player.two_dim.bottom();
+                let possible_new_y = player.two_dim.bottom() + player.two_dim.velocity.y;
+                let mut new_y = possible_new_y;
+                let mut player_on_ground = false;
+
+                for two_dim_object in (&two_dim_objects).join() {
+                    if player.two_dim.overlapping_x(two_dim_object)
+                        && old_y >= two_dim_object.top()
+                        && new_y <= two_dim_object.top() {
+                        player_on_ground = true;
+                        new_y = two_dim_object.top();
+                        player.two_dim.velocity.y = 0.;
+                    }
+                }
+                player.two_dim.set_bottom(new_y);
+
+                player_on_ground
+            } else {
+                let mut player_on_ground = false;
+
+                for two_dim_object in (&two_dim_objects).join() {
+                    if player.two_dim.overlapping_x(two_dim_object)
+                        && player.two_dim.bottom() == two_dim_object.top() {
+                        player_on_ground = true;
+                    }
+                }
+
+                player_on_ground
+            };
 
             // gravity
             if player_on_ground {
