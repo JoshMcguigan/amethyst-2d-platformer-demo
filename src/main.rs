@@ -106,8 +106,16 @@ impl TwoDimObject {
         self.position.x + self.size.x / 2.
     }
 
+    fn set_right(&mut self, right: f32) {
+        self.position.x = right - self.size.x / 2.;
+    }
+
     fn overlapping_x(&self, other: &Self) -> bool {
-        self.right() >= other.left() && self.left() <= other.right()
+        self.left() < other.right() && other.left() < self.right()
+    }
+
+    fn overlapping_y(&self, other: &Self) -> bool {
+        self.bottom() < other.top() && other.bottom() < self.top()
     }
 }
 
@@ -401,8 +409,41 @@ impl<'s> System<'s> for PhysicsSystem {
 
     fn run(&mut self, (mut players, two_dim_objects): Self::SystemData) {
         for mut player in (&mut players).join() {
-            player.two_dim.position.x += player.two_dim.velocity.x;
+            if player.two_dim.velocity.x > 0. {
+                // player moving right
+                let old_x = player.two_dim.right();
+                let mut possible_new_x = old_x + player.two_dim.velocity.x;
 
+                for two_dim_object in (&two_dim_objects).join() {
+                    if player.two_dim.overlapping_y(two_dim_object)
+                        && old_x <= two_dim_object.left()
+                        && possible_new_x >= two_dim_object.left() {
+                        // can't early return here, because we need to consider collision with more than one other object
+                        // don't need to set velocity back to zero here, but could depending on how we want the player animation to act
+                        possible_new_x = two_dim_object.left();
+                    }
+                }
+
+                player.two_dim.set_right(possible_new_x);
+            } else if player.two_dim.velocity.x < 0. {
+                // player moving left
+                let old_x = player.two_dim.left();
+                let mut possible_new_x = old_x + player.two_dim.velocity.x;
+
+                for two_dim_object in (&two_dim_objects).join() {
+                    if player.two_dim.overlapping_y(two_dim_object)
+                        && old_x >= two_dim_object.right()
+                        && possible_new_x <= two_dim_object.right() {
+                        // can't early return here, because we need to consider collision with more than one other object
+                        // don't need to set velocity back to zero here, but could depending on how we want the player animation to act
+                        possible_new_x = two_dim_object.right();
+                    }
+                }
+
+                player.two_dim.set_left(possible_new_x);
+            };
+
+            // todo consider collisions from the bottom?
             let old_y = player.two_dim.bottom();
             let possible_new_y = player.two_dim.bottom() + player.two_dim.velocity.y;
             let mut new_y = possible_new_y;
