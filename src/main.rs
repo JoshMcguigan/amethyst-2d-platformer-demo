@@ -2,7 +2,7 @@ use amethyst::{
     assets::{AssetStorage, Loader},
     core::{Transform, TransformBundle},
     ecs::{Component, Entities, Entity, Join, Read, System,
-          VecStorage, WriteStorage, },
+          VecStorage, WriteStorage, ReadStorage, },
     input::{InputBundle, InputHandler},
     prelude::*,
     renderer::{
@@ -25,8 +25,7 @@ const DISPLAY_WIDTH: f32 = 1000.;
 pub enum PlayerState {
     Idle,
     Walking,
-    JumpingPosVelocity,
-    JumpingNegVelocity,
+    Jumping,
 }
 
 impl Default for PlayerState {
@@ -356,14 +355,12 @@ pub struct ControlSystem;
 impl<'s> System<'s> for ControlSystem {
     type SystemData = (
         Entities<'s>,
-        WriteStorage<'s, Transform>,
         WriteStorage<'s, Player>,
-        WriteStorage<'s, TwoDimObject>,
+        ReadStorage<'s, TwoDimObject>,
         Read<'s, InputHandler<String, String>>,
-        WriteStorage<'s, Flipped>,
     );
 
-    fn run(&mut self, (entities, mut transforms, mut players, mut two_dim_objects, input, mut flipped): Self::SystemData) {
+    fn run(&mut self, (entities, mut players, two_dim_objects, input): Self::SystemData) {
         // calculate this so we know if the character should be able to jump
         let mut player_entities_on_ground = vec![];
 
@@ -377,37 +374,15 @@ impl<'s> System<'s> for ControlSystem {
 
         for (mut player, player_entity) in (&mut players, &entities).join() {
             let player_on_ground = player_entities_on_ground.contains(&player_entity);
-            let current_state = player.state;
-            let mut next_state = PlayerState::Idle; // assume idle until movement detected
 
             let x_input = input.axis_value("horizontal").expect("horizontal axis exists");
+            let jump_input = input.action_is_down("jump").expect("jump action exists");
+
             player.two_dim.velocity.x = x_input as f32;
 
-            if x_input > 0. {
-                // face right
-                flipped.remove(player_entity);
-            } else if x_input < 0. {
-                // face left
-                flipped.insert(player_entity, Flipped::Horizontal)
-                    .expect("Failed to flip");
-            }
-
-            if x_input != 0. {
-                next_state = PlayerState::Walking;
-            }
-
-            if player_on_ground {
-                if input.action_is_down("jump").expect("jump action exists") {
-                    player.two_dim.velocity.y = 20.;
-                    next_state = PlayerState::JumpingPosVelocity;
-                };
+            if jump_input && player_on_ground {
+                player.two_dim.velocity.y = 20.;
             };
-
-            if current_state != next_state {
-                player.state = next_state;
-                player.ticks = 0;
-            }
-
         }
     }
 }
@@ -416,18 +391,12 @@ pub struct PhysicsSystem;
 
 impl<'s> System<'s> for PhysicsSystem {
     type SystemData = (
-        Entities<'s>,
-        WriteStorage<'s, Transform>,
         WriteStorage<'s, Player>,
-        WriteStorage<'s, TwoDimObject>,
-        WriteStorage<'s, Flipped>,
+        ReadStorage<'s, TwoDimObject>,
     );
 
-    fn run(&mut self, (entity, mut transforms, mut players, mut two_dim_objects, mut flipped): Self::SystemData) {
-        for (mut transform, e, mut player) in (&mut transforms, &*entity, &mut players).join() {
-            let current_state = player.state;
-            let mut next_state = PlayerState::Idle; // assume idle until movement detected
-
+    fn run(&mut self, (mut players, two_dim_objects): Self::SystemData) {
+        for mut player in (&mut players).join() {
             player.two_dim.position.x += player.two_dim.velocity.x;
 
             let old_y = player.two_dim.bottom();
@@ -453,8 +422,6 @@ impl<'s> System<'s> for PhysicsSystem {
             } else {
                 player.two_dim.velocity.y -= 0.7;
             }
-
-            player.two_dim.update_transform_position(&mut transform);
         }
     }
 }
@@ -463,21 +430,47 @@ pub struct PlayerAnimationSystem;
 
 impl<'s> System<'s> for PlayerAnimationSystem {
     type SystemData = (
+        Entities<'s>,
         WriteStorage<'s, Player>,
         WriteStorage<'s, SpriteRender>,
+        WriteStorage<'s, Flipped>,
+        WriteStorage<'s, Transform>,
     );
 
-    fn run(&mut self, (mut players, mut sprites): Self::SystemData) {
-        for (mut player, mut sprite) in (&mut players, &mut sprites).join() {
-            player.ticks = player.ticks.wrapping_add(1);
+    fn run(&mut self, (entities, mut players, mut sprites, mut flipped, mut transforms): Self::SystemData) {
+        for (player_entity, mut player, mut sprite, mut transform) in (&entities, &mut players, &mut sprites, &mut transforms).join() {
+            // set sprite direction
+            if player.two_dim.velocity.x > 0. {
+                // face right
+                flipped.remove(player_entity);
+            } else if player.two_dim.velocity.x < 0. {
+                // face left
+                flipped.insert(player_entity, Flipped::Horizontal)
+                    .expect("Failed to flip");
+            }
+
+            // set player state
+            let current_state = player.state;
+            let next_state =
+                if player.two_dim.velocity.y != 0. { PlayerState::Jumping }
+                    else if player.two_dim.velocity.x != 0. { PlayerState::Walking }
+                    else { PlayerState::Idle };
+
+            if current_state != next_state {
+                player.state = next_state;
+                player.ticks = 0; // reset animation if player state changed
+            }
+
             let (sprite_initial_index, num_sprites) = match player.state {
                 PlayerState::Idle => (15, 15),
                 PlayerState::Walking => (60, 15),
-                PlayerState::JumpingPosVelocity => (35, 7),
-                PlayerState::JumpingNegVelocity => (35, 7),
+                PlayerState::Jumping => (35, 7),
             };
             let game_frames_per_animation_frame = 6;
             sprite.sprite_number = (player.ticks / game_frames_per_animation_frame) % num_sprites + sprite_initial_index;
+            player.ticks = player.ticks.wrapping_add(1);
+
+            player.two_dim.update_transform_position(&mut transform);
         }
     }
 }
