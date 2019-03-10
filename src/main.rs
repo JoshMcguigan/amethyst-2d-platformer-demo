@@ -20,11 +20,13 @@ const PLAYER_H: u32 = TOTAL_PLAYER_SPRITE_HEIGHT - PLAYER_SPRITE_Y_PADDING;
 const GROUND_Y: f32 = 74.;
 const CRATE_SIZE: f32 = 77.;
 const DISPLAY_WIDTH: f32 = 1000.;
+const PLAYER_MAX_X_VELOCITY: f32 = 5.;
 
 #[derive(PartialEq, Clone, Copy)]
 pub enum PlayerState {
     Idle,
     Walking,
+    Running,
     Jumping,
 }
 
@@ -390,7 +392,12 @@ impl<'s> System<'s> for ControlSystem {
             let x_input = input.axis_value("horizontal").expect("horizontal axis exists");
             let jump_input = input.action_is_down("jump").expect("jump action exists");
 
-            player.two_dim.velocity.x = x_input as f32;
+            if x_input == 0. {
+                player.two_dim.velocity.x = 0.;
+            } else {
+                player.two_dim.velocity.x += 0.1 * x_input as f32;
+                player.two_dim.velocity.x = player.two_dim.velocity.x.min(PLAYER_MAX_X_VELOCITY).max(-1. * PLAYER_MAX_X_VELOCITY);
+            }
 
             if jump_input && player_on_ground {
                 player.two_dim.velocity.y = 20.;
@@ -498,6 +505,7 @@ impl<'s> System<'s> for PlayerAnimationSystem {
             let current_state = player.state;
             let next_state =
                 if player.two_dim.velocity.y != 0. { PlayerState::Jumping }
+                    else if player.two_dim.velocity.x.abs() > PLAYER_MAX_X_VELOCITY * 0.7 { PlayerState::Running }
                     else if player.two_dim.velocity.x != 0. { PlayerState::Walking }
                     else { PlayerState::Idle };
 
@@ -509,6 +517,7 @@ impl<'s> System<'s> for PlayerAnimationSystem {
             let (sprite_initial_index, num_sprites) = match player.state {
                 PlayerState::Idle => (15, 15),
                 PlayerState::Walking => (60, 15),
+                PlayerState::Running => (45, 15),
                 PlayerState::Jumping => (35, 7),
             };
             let game_frames_per_animation_frame = 6;
