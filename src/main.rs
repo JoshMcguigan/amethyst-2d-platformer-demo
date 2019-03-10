@@ -148,6 +148,10 @@ impl SimpleState for Example {
         init_crate_sprite(world, &crate_sprite_sheet_handle, 0., GROUND_Y);
         init_crate_sprite(world, &crate_sprite_sheet_handle, CRATE_SIZE, GROUND_Y);
         init_crate_sprite(world, &crate_sprite_sheet_handle, 0., GROUND_Y + CRATE_SIZE);
+        let floating_crate_height = (PLAYER_H + 10) as f32 + GROUND_Y;
+        init_crate_sprite(world, &crate_sprite_sheet_handle, DISPLAY_WIDTH - CRATE_SIZE, floating_crate_height);
+        init_crate_sprite(world, &crate_sprite_sheet_handle, DISPLAY_WIDTH - 2. * CRATE_SIZE, floating_crate_height);
+        init_crate_sprite(world, &crate_sprite_sheet_handle, DISPLAY_WIDTH - 3. * CRATE_SIZE, floating_crate_height);
 
         world.register::<Player>();
         let sprite_sheet_handle = load_player_sprite_sheet(world);
