@@ -430,8 +430,9 @@ impl<'s> System<'s> for PhysicsSystem {
                         possible_new_x = two_dim_object.left();
                     }
                 }
-
-                player.two_dim.set_right(possible_new_x);
+                // ensure player stays inside "walls" of display
+                let new_x = possible_new_x.min(DISPLAY_WIDTH).max(PLAYER_W as f32);
+                player.two_dim.set_right(new_x);
             } else if player.two_dim.velocity.x < 0. {
                 // player moving left
                 let old_x = player.two_dim.left();
@@ -446,8 +447,9 @@ impl<'s> System<'s> for PhysicsSystem {
                         possible_new_x = two_dim_object.right();
                     }
                 }
-
-                player.two_dim.set_left(possible_new_x);
+                // ensure player stays inside "walls" of display
+                let new_x = possible_new_x.min(DISPLAY_WIDTH - PLAYER_W as f32).max(0.);
+                player.two_dim.set_left(new_x);
             };
 
             let player_on_ground = if player.two_dim.velocity.y > 0. {
