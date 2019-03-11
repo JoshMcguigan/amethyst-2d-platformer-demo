@@ -1,14 +1,7 @@
 use amethyst::{
-    core::{Transform, TransformBundle},
-    ecs::{Entities, Join, Read, ReadStorage,
-          System, VecStorage, WriteStorage, },
-    input::{InputBundle, InputHandler},
-    prelude::*,
-    renderer::{
-        ALPHA, ColorMask, DisplayConfig, DrawFlat2D, Flipped, Pipeline,
-        RenderBundle, SpriteRender,
-        Stage
-    },
+    core::{Transform},
+    ecs::{Entities, Join, System, WriteStorage},
+    renderer::{Flipped, SpriteRender},
 };
 use crate::{
     PLAYER_MAX_X_VELOCITY,

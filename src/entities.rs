@@ -1,14 +1,11 @@
 use amethyst::{
     assets::{AssetStorage, Loader},
     core::{Transform},
-    ecs::{Entity, Join, Read, System,
-          VecStorage, WriteStorage, ReadStorage, },
-    input::{InputBundle, InputHandler},
+    ecs::{Entity},
     prelude::*,
     renderer::{
-        Camera, Pipeline, PngFormat,
-        Projection, RenderBundle, Sprite, SpriteRender, SpriteSheet,
-        SpriteSheetHandle, Stage, Texture, TextureMetadata, SpriteSheetFormat, Transparent
+        Camera, PngFormat, Projection, Sprite, SpriteRender, SpriteSheet,
+        SpriteSheetHandle, Texture, TextureMetadata, SpriteSheetFormat, Transparent
     },
 };
 use crate::{

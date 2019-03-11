@@ -1,14 +1,5 @@
 use amethyst::{
-    core::{Transform, TransformBundle},
-    ecs::{Entities, Join, Read, ReadStorage,
-          System, VecStorage, WriteStorage, },
-    input::{InputBundle, InputHandler},
-    prelude::*,
-    renderer::{
-        ALPHA, ColorMask, DisplayConfig, DrawFlat2D, Flipped, Pipeline,
-        RenderBundle, SpriteRender,
-        Stage
-    },
+    ecs::{Join, ReadStorage, System, WriteStorage},
 };
 use crate::{
     DISPLAY_WIDTH, PLAYER_W,

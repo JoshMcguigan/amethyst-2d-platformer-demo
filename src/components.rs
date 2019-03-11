@@ -1,14 +1,6 @@
 use amethyst::{
-    core::{Transform, TransformBundle},
-    ecs::{Component, Entities, Join, Read, ReadStorage,
-          System, VecStorage, WriteStorage, },
-    input::{InputBundle, InputHandler},
-    prelude::*,
-    renderer::{
-        ALPHA, ColorMask, DisplayConfig, DrawFlat2D, Flipped, Pipeline,
-        RenderBundle, SpriteRender,
-        Stage
-    },
+    core::{Transform},
+    ecs::{Component, VecStorage},
 };
 use specs_derive::Component;
 
